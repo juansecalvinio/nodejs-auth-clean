@@ -19,7 +19,22 @@ export class AuthDataSourceImplementation implements AuthDataSource {
   ) {}
 
   async login(loginUserDTO: LoginUserDTO): Promise<UserEntity> {
-    throw new Error("Method not implemented.");
+    const { email, password } = loginUserDTO;
+
+    try {
+      const user = await UserModel.findOne({ email });
+      if (!user) throw CustomError.badRequest("Invalid credentials");
+
+      const isMatching = this.comparePassword(password, user.password);
+      if (!isMatching) throw CustomError.badRequest("Invalid credentials");
+
+      return UserMapper.userEntityFromObject(user);
+    } catch (error) {
+      if (error instanceof CustomError) {
+        throw error;
+      }
+      throw CustomError.internalServer;
+    }
   }
 
   async register(registerUserDTO: RegisterUserDTO): Promise<UserEntity> {

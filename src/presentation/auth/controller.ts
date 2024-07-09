@@ -1,8 +1,14 @@
 import { Request, Response } from "express";
-import { AuthRepository, CustomError, RegisterUserDTO } from "../../domain";
+import {
+  AuthRepository,
+  CustomError,
+  LoginUserDTO,
+  RegisterUserDTO,
+} from "../../domain";
+import { UserModel } from "../../data/mongodb";
+import { LoginUser, RegisterUser } from "../../domain/use-cases";
 
 export class AuthController {
-  // Inyección de dependencias
   constructor(private readonly authRepository: AuthRepository) {}
 
   private handleError = (error: unknown, res: Response) => {
@@ -19,13 +25,26 @@ export class AuthController {
 
     if (error) res.status(400).json({ error });
 
-    this.authRepository
-      .register(registerUserDTO!)
-      .then((user) => res.json(user))
+    new RegisterUser(this.authRepository)
+      .execute(registerUserDTO!)
+      .then((data) => res.json(data))
       .catch((error) => this.handleError(error, res));
   };
 
   loginUser = (req: Request, res: Response) => {
-    res.json({ message: "Login controller" });
+    const [error, loginUserDTO] = LoginUserDTO.login(req.body);
+
+    if (error) res.status(400).json({ error });
+
+    new LoginUser(this.authRepository)
+      .execute(loginUserDTO!)
+      .then((data) => res.json(data))
+      .catch((error) => this.handleError(error, res));
+  };
+
+  getUsers = (req: Request, res: Response) => {
+    UserModel.find()
+      .then((users) => res.json({ user: req.body.user }))
+      .catch(() => res.status(500).json({ error: "Internal Server Error" }));
   };
 }
